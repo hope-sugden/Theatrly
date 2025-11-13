@@ -1,0 +1,81 @@
+-- Create profiles table for user data
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username TEXT UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own profile"
+  ON public.profiles FOR SELECT
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile"
+  ON public.profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+-- Trigger to create profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username)
+  VALUES (new.id, new.raw_user_meta_data->>'username');
+  RETURN new;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Create shows catalog table
+CREATE TABLE public.shows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  photo_url TEXT NOT NULL,
+  created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.shows ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view shows"
+  ON public.shows FOR SELECT
+  USING (true);
+
+CREATE POLICY "Authenticated users can add shows"
+  ON public.shows FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
+
+-- Create user_shows table for tracking
+CREATE TABLE public.user_shows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  show_id UUID REFERENCES public.shows(id) ON DELETE CASCADE NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('seen', 'want_to_see')),
+  date_seen DATE,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  UNIQUE(user_id, show_id, status)
+);
+
+ALTER TABLE public.user_shows ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own show entries"
+  ON public.user_shows FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can add their own show entries"
+  ON public.user_shows FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own show entries"
+  ON public.user_shows FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own show entries"
+  ON public.user_shows FOR DELETE
+  USING (auth.uid() = user_id);

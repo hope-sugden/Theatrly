@@ -1,0 +1,45 @@
+-- Add foreign keys to profiles table for activities and friendships
+ALTER TABLE public.activities
+  DROP CONSTRAINT IF EXISTS activities_user_id_fkey,
+  ADD CONSTRAINT activities_user_id_fkey 
+    FOREIGN KEY (user_id) 
+    REFERENCES public.profiles(id) 
+    ON DELETE CASCADE;
+
+ALTER TABLE public.friendships
+  DROP CONSTRAINT IF EXISTS friendships_user_id_fkey,
+  ADD CONSTRAINT friendships_user_id_fkey 
+    FOREIGN KEY (user_id) 
+    REFERENCES public.profiles(id) 
+    ON DELETE CASCADE;
+
+ALTER TABLE public.friendships
+  DROP CONSTRAINT IF EXISTS friendships_friend_id_fkey,
+  ADD CONSTRAINT friendships_friend_id_fkey 
+    FOREIGN KEY (friend_id) 
+    REFERENCES public.profiles(id) 
+    ON DELETE CASCADE;
+
+ALTER TABLE public.comments
+  DROP CONSTRAINT IF EXISTS comments_user_id_fkey,
+  ADD CONSTRAINT comments_user_id_fkey 
+    FOREIGN KEY (user_id) 
+    REFERENCES public.profiles(id) 
+    ON DELETE CASCADE;
+
+ALTER TABLE public.reactions
+  DROP CONSTRAINT IF EXISTS reactions_user_id_fkey,
+  ADD CONSTRAINT reactions_user_id_fkey 
+    FOREIGN KEY (user_id) 
+    REFERENCES public.profiles(id) 
+    ON DELETE CASCADE;
+
+-- Update RLS policy on profiles to allow users to view all profiles for search
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
+CREATE POLICY "Users can view all profiles" 
+  ON public.profiles FOR SELECT
+  USING (true);
+
+CREATE POLICY "Users can insert their own profile" 
+  ON public.profiles FOR INSERT
+  WITH CHECK (auth.uid() = id);

@@ -1,0 +1,25 @@
+-- Drop the existing public_reviews view
+DROP VIEW IF EXISTS public.public_reviews CASCADE;
+
+-- Recreate public_reviews as a view that automatically pulls from user_shows
+CREATE VIEW public.public_reviews AS
+SELECT 
+  us.id,
+  us.show_id,
+  us.user_id,
+  us.rating,
+  us.review,
+  us.city,
+  us.date_seen,
+  us.is_anonymous,
+  us.contains_spoilers,
+  us.created_at,
+  p.username
+FROM user_shows us
+LEFT JOIN profiles p ON p.id = us.user_id
+WHERE us.status = 'seen' 
+  AND (us.rating IS NOT NULL OR us.review IS NOT NULL);
+
+-- Grant SELECT permissions on the view
+GRANT SELECT ON public.public_reviews TO authenticated;
+GRANT SELECT ON public.public_reviews TO anon;

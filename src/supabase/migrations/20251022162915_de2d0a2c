@@ -1,0 +1,14 @@
+-- Add new columns to user_shows table for reviews and location
+ALTER TABLE public.user_shows 
+  ADD COLUMN IF NOT EXISTS city text,
+  ADD COLUMN IF NOT EXISTS private_notes text,
+  ADD COLUMN IF NOT EXISTS review text,
+  ADD COLUMN IF NOT EXISTS rating integer CHECK (rating >= 1 AND rating <= 5),
+  ADD COLUMN IF NOT EXISTS is_anonymous boolean DEFAULT false NOT NULL,
+  ADD COLUMN IF NOT EXISTS contains_spoilers boolean DEFAULT false NOT NULL;
+
+-- Add policy to allow public viewing of reviews (private_notes will be filtered in app code)
+CREATE POLICY "Anyone can view reviews"
+ON public.user_shows
+FOR SELECT
+USING (true);

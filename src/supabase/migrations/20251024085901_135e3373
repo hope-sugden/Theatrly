@@ -1,0 +1,3 @@
+-- Add unique constraint to shows title to prevent duplicate shows
+-- Use a case-insensitive index to catch variations like "Hamilton" vs "hamilton"
+CREATE UNIQUE INDEX shows_title_unique_idx ON public.shows (LOWER(TRIM(title)));

@@ -1,0 +1,24 @@
+-- Drop existing view if it exists
+DROP VIEW IF EXISTS public.public_reviews;
+
+-- Create the public_reviews view to show all public reviews
+CREATE VIEW public.public_reviews AS
+SELECT 
+  us.id,
+  us.show_id,
+  us.user_id,
+  us.rating,
+  us.review,
+  us.city,
+  us.date_seen,
+  us.is_anonymous,
+  us.contains_spoilers,
+  us.created_at,
+  p.username
+FROM public.user_shows us
+LEFT JOIN public.profiles p ON us.user_id = p.id
+WHERE us.review IS NOT NULL;
+
+-- Grant SELECT permission on the view to authenticated and anon users
+GRANT SELECT ON public.public_reviews TO authenticated;
+GRANT SELECT ON public.public_reviews TO anon;

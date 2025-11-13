@@ -1,0 +1,32 @@
+-- Drop the overly permissive public policy that exposes all columns
+DROP POLICY IF EXISTS "Anyone can view reviews" ON public.user_shows;
+
+-- Create a secure view for public reviews that only exposes safe columns
+CREATE OR REPLACE VIEW public.public_reviews AS
+SELECT 
+  us.id,
+  us.show_id,
+  us.rating,
+  us.review,
+  us.city,
+  us.date_seen,
+  us.contains_spoilers,
+  us.is_anonymous,
+  us.created_at,
+  -- Only show username if not anonymous, otherwise null
+  CASE 
+    WHEN us.is_anonymous = false THEN p.username
+    ELSE NULL
+  END as username
+FROM public.user_shows us
+LEFT JOIN public.profiles p ON us.user_id = p.id
+WHERE us.review IS NOT NULL OR us.rating IS NOT NULL;
+
+-- Enable RLS on the view
+ALTER VIEW public.public_reviews SET (security_invoker = true);
+
+-- Grant access to the view
+GRANT SELECT ON public.public_reviews TO authenticated, anon;
+
+-- Create a comment explaining the view's purpose
+COMMENT ON VIEW public.public_reviews IS 'Public view of reviews that excludes private_notes and user_id to protect user privacy. Only shows username when is_anonymous is false.';
